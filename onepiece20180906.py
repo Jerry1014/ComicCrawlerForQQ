@@ -20,7 +20,7 @@ def init_browser():
 
     # 浏览器设置
     chrome_options = Options()
-    # chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless')
     browser = webdriver.Chrome(chrome_options=chrome_options)
 
     # 补全网址
