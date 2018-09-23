@@ -18,8 +18,8 @@ import threading
 
 
 def send_email():
-    my_sender = 'yali_1014@163.com'  # 发件人邮箱账号，为了后面易于维护，所以写成了变量
-    my_user = '757320383@qq.com'  # 收件人邮箱账号，为了后面易于维护，所以写成了变量
+    my_sender = 'XXXXXX@163.com'  # 发件人邮箱账号，为了后面易于维护，所以写成了变量
+    my_user = 'XXXXXXX@qq.com'  # 收件人邮箱账号，为了后面易于维护，所以写成了变量
     try:
         msg = MIMEText('已爬取到第'+str(crawling_settings['last_episode'])+"话", 'plain', 'utf-8')
         msg['From'] = formataddr(["海贼王爬虫", my_sender])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
@@ -27,7 +27,7 @@ def send_email():
         msg['Subject'] = "爬虫报告"  # 邮件的主题，也可以说是标题
 
         server = smtplib.SMTP("smtp.163.com", 25)  # 发件人邮箱中的SMTP服务器，端口是25
-        server.login(my_sender, "h101412315")  # 括号中对应的是发件人邮箱账号、邮箱密码
+        server.login(my_sender, "XXXXXXX")  # 括号中对应的是发件人邮箱账号、邮箱密码
         server.sendmail(my_sender, [my_user, ], msg.as_string())  # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
         server.quit()  # 这句是关闭连接的意思
         print("邮件发送成功")
