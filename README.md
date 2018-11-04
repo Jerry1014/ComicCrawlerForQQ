@@ -1,12 +1,13 @@
 # Jerry1014/Comic-Onepiece-Crawler
-# 爬取腾讯动漫上的漫画
-# 环境：py3    第三方库：selenium，requests，pandas
+爬取腾讯动漫上的漫画
+环境：py3    第三方库：selenium，requests，pandas
 
 # 使用步骤
 1.下载py脚本
 2.如果你有chrome浏览器的话，仅需下载chromedriver.exe
 3.否则，根据你的电脑下载对应的IEDriverServer(32/64).exe   （在将来支持）
-# 注意：XXX.exe必须和脚本放在同一目录下
+注意：XXX.exe必须和脚本放在同一目录下
+-
 4.打开脚本
 
 # 使用说明
@@ -18,7 +19,6 @@
 建议使用Kindle Comic Converter生成mobi漫画，在kindle上看会更舒服哦
 
 通过邮件将爬取结果发送到我的邮箱 （可修改代码实现发送到自己的邮箱，通过配置文件修改的方式会在将来被支持）
----------------------------------------------------------------
 
 # 碎碎念
 使用headless chrome，爬取更省资源（吧）
