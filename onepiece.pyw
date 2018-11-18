@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.common.by import By
-import requests
 import os
 import re
-import time
-from multiprocessing import Process, Queue
-import pandas
 import smtplib
+import threading
+import time
 from email.mime.text import MIMEText
 from email.utils import formataddr
-import threading
+from multiprocessing import Process, Queue
+
+import pandas
+import requests
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 def send_email():
-    my_sender = 'XXXXXX@163.com'  # 发件人邮箱账号，为了后面易于维护，所以写成了变量
-    my_user = 'XXXXXXX@qq.com'  # 收件人邮箱账号，为了后面易于维护，所以写成了变量
+    my_sender = '13322468550@163.com'  # 发件人邮箱账号，为了后面易于维护，所以写成了变量
+    my_user = '757320383@qq.com'  # 收件人邮箱账号，为了后面易于维护，所以写成了变量
     try:
-        msg = MIMEText('已爬取到第'+str(crawling_settings['last_episode'])+"话", 'plain', 'utf-8')
+        msg = MIMEText('已爬取到第' + str(crawling_settings['last_episode']) + "话", 'plain', 'utf-8')
         msg['From'] = formataddr(["海贼王爬虫", my_sender])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
         msg['To'] = formataddr(["Jerry", my_user])  # 括号里的对应收件人邮箱昵称、收件人邮箱账号
         msg['Subject'] = "爬虫报告"  # 邮件的主题，也可以说是标题
 
         server = smtplib.SMTP("smtp.163.com", 25)  # 发件人邮箱中的SMTP服务器，端口是25
-        server.login(my_sender, "XXXXXXX")  # 括号中对应的是发件人邮箱账号、邮箱密码
+        server.login(my_sender, "101412315")  # 括号中对应的是发件人邮箱账号、邮箱密码
         server.sendmail(my_sender, [my_user, ], msg.as_string())  # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
         server.quit()  # 这句是关闭连接的意思
         print("邮件发送成功")
@@ -99,7 +100,8 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
 
         # 访问海贼王动漫的页面
         try:
-            WebDriverWait(browser, 10).until(expected_conditions.element_to_be_clickable((By.LINK_TEXT, "开始阅读"))).click()
+            WebDriverWait(browser, 10).until(
+                expected_conditions.element_to_be_clickable((By.LINK_TEXT, "开始阅读"))).click()
         except TimeoutException:
             browser.quit()
             print("网络可能未连接")
@@ -164,14 +166,14 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
         try:
             browser.find_element_by_id('next_item').click()  # 模拟用户点击下一话
         except:
-            print("已到最后一话，第%d话。" % (settings['start_episode']-1))
+            print("已到最后一话，第%d话。" % (settings['start_episode'] - 1))
             break
 
     while len(thread) != 0:
         for i in thread:
             if not i.is_alive():
                 thread.remove(i)
-    r.put(settings['start_episode']-1)
+    r.put(settings['start_episode'] - 1)
     browser.quit()
 
 
@@ -201,7 +203,7 @@ if __name__ == '__main__':
 
     # 访问海贼王动漫的页面
     try:
-        WebDriverWait(first_browser, 10).until(expected_conditions.element_to_be_clickable((By.LINK_TEXT, "开始阅读")))\
+        WebDriverWait(first_browser, 10).until(expected_conditions.element_to_be_clickable((By.LINK_TEXT, "开始阅读"))) \
             .click()
     except TimeoutException:
         first_browser.quit()
@@ -213,14 +215,14 @@ if __name__ == '__main__':
     if short_of_episode > 1:
         remainder = short_of_episode % 3
 
-        tem = int(short_of_episode/3) + settings['start_episode'] - 1
+        tem = int(short_of_episode / 3) + settings['start_episode'] - 1
         if remainder > 0:
             tem += 1
             remainder -= 1
         tem_cid = get_right_title(settings['start_episode'])
         q_msg.put({'start_episode': settings['start_episode'], 'end_of_episode': tem, 'cid': tem_cid})
 
-        tem2 = tem + int(short_of_episode/3)
+        tem2 = tem + int(short_of_episode / 3)
         if remainder > 0:
             tem2 += 1
             remainder -= 1
