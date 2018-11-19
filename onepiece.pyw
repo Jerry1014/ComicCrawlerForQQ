@@ -19,17 +19,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def send_email():
-    my_sender = '13322468550@163.com'  # 发件人邮箱账号，为了后面易于维护，所以写成了变量
-    my_user = '757320383@qq.com'  # 收件人邮箱账号，为了后面易于维护，所以写成了变量
     try:
         msg = MIMEText('已爬取到第' + str(crawling_settings['last_episode']) + "话", 'plain', 'utf-8')
-        msg['From'] = formataddr(["海贼王爬虫", my_sender])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
-        msg['To'] = formataddr(["Jerry", my_user])  # 括号里的对应收件人邮箱昵称、收件人邮箱账号
+        msg['From'] = formataddr(["海贼王爬虫", crawling_settings['sender']])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
+        msg['To'] = formataddr(["Jerry", crawling_settings['receiver']])  # 括号里的对应收件人邮箱昵称、收件人邮箱账号
         msg['Subject'] = "爬虫报告"  # 邮件的主题，也可以说是标题
 
         server = smtplib.SMTP("smtp.163.com", 25)  # 发件人邮箱中的SMTP服务器，端口是25
-        server.login(my_sender, "101412315")  # 括号中对应的是发件人邮箱账号、邮箱密码
-        server.sendmail(my_sender, [my_user, ], msg.as_string())  # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
+        server.login(crawling_settings['sender'], crawling_settings['password'])  # 括号中对应的是发件人邮箱账号、邮箱密码
+        server.sendmail(crawling_settings['sender'], [crawling_settings['receiver'], ], msg.as_string())
+        # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
         server.quit()  # 这句是关闭连接的意思
         print("邮件发送成功")
     except smtplib.SMTPException:
@@ -185,8 +184,15 @@ if __name__ == '__main__':
         crawling_settings['comic'] = settings_file_1['comic'][0]
         crawling_settings['save_path'] = settings_file_1['save_path'][0]
         crawling_settings['last_episode'] = settings_file_1['last_episode'][0]
+        crawling_settings['sender'] = settings_file_1['sender'][0]
+        crawling_settings['password'] = settings_file_1['password'][0]
+        crawling_settings['receiver'] = settings_file_1['receiver'][0]
     except:
         crawling_settings = {'comic': '505430/', 'save_path': 'D:\\tem\\', 'last_episode': 916}
+        settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
+        settings_file_1 = settings_file_1.to_csv("settings.csv")
+        input("已生成默认的配置文件，请在当前工作目录下打开并配置，再重新启动此脚本")
+        os._exit(0)
     finally:
         pass
     q_msg = Queue()
