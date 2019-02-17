@@ -11,7 +11,7 @@ from multiprocessing import Process, Queue
 import pandas
 import requests
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
@@ -45,6 +45,7 @@ def init_browser(comic_you_need):
     """用于爬取的浏览器初始化"""
     # 浏览器设置
     chrome_options = Options()
+    # 无界面
     chrome_options.add_argument('--headless')
     the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
 
@@ -144,17 +145,20 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
                 pic_all_name = str(path) + str(pic_name) + '.png'
 
             img = i.find_element_by_tag_name('img')
-            try:
-                while not re.match("^https://", img.get_attribute('src')):
-                    img = i.find_element_by_tag_name('img')
-            except StaleElementReferenceException:
-                time.sleep(1)
-                img = i.find_element_by_tag_name('img')
-                while not re.match("^https://", img.get_attribute('src')):
-                    img = i.find_element_by_tag_name('img')
             url = img.get_attribute('src')
+            while re.search('gif$', url):
+                time.sleep(0.5)
+                img = i.find_element_by_tag_name('img')
+                url = img.get_attribute('src')
+
             t = threading.Thread(target=save_pic, args=(url, pic_all_name))
             thread.append(t)
+            while len(thread) > 2:
+                time.sleep(0.2)
+                for i in thread:
+                    if not i.is_alive():
+                        thread.remove(i)
+
             t.start()
             pic_name += 1
 
