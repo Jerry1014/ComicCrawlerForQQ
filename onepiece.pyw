@@ -19,6 +19,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def send_email():
+    """
+    用于向指定邮箱发送爬取结果邮件，相应的设置在crawling_settings中
+    :return: None
+    """
     try:
         msg = MIMEText('已爬取到第' + str(crawling_settings['last_episode']) + "话", 'plain', 'utf-8')
         msg['From'] = formataddr(["海贼王爬虫", crawling_settings['sender']])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
@@ -36,20 +40,29 @@ def send_email():
 
 
 def save_pic(url, save_path):
+    """
+    单个用于下载和保存图片的线程
+    :param url: 下载图片的url
+    :param save_path: 图片保存完整路径
+    :return: None
+    """
     src = requests.get(url).content
     with open(save_path, 'wb') as file:
         file.write(src)
 
 
 def init_browser(comic_you_need):
-    """用于爬取的浏览器初始化"""
+    """
+    用于爬取的浏览器初始化
+    :return:webdriver.Chrome
+    """
     # 浏览器设置
     chrome_options = Options()
     # 无界面
     chrome_options.add_argument('--headless')
     the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
 
-    # 补全网址
+    # 用于补全网址
     url = "http://ac.qq.com/Comic/ComicInfo/id/" + comic_you_need
 
     # 访问海贼王动漫的页面
@@ -58,6 +71,10 @@ def init_browser(comic_you_need):
 
 
 def get_end_of_episode():
+    """
+    用于获取当前海贼王的最新话数
+    :return: int 最新话数,webdriver.Chrome
+    """
     first_browser = init_browser(crawling_settings['comic'])
     if first_browser:
         try:
@@ -71,6 +88,12 @@ def get_end_of_episode():
 
 
 def get_right_title(actual_start_episode, last_cid=None):
+    """
+    用于获取正确话数对应的url中的cid
+    :param actual_start_episode: 需要爬取的话数
+    :param last_cid: 上一次的cid
+    :return: int 正确话数对应的cid
+    """
     if last_cid:
         cid = last_cid
     else:
@@ -92,7 +115,14 @@ def get_right_title(actual_start_episode, last_cid=None):
 
 
 def crawling_comic(q, r, crawling_settings2, browser=None):
-    """开始爬取"""
+    """
+    爬取主函数，爬取指定的几话漫画
+    :param q: 进程间的通信，要爬取的集数
+    :param r: 进程间的通信，爬取结果
+    :param crawling_settings2: 爬取设置
+    :param browser: webdriver
+    :return: None
+    """
     if not browser:
         # 初始化浏览器
         comic_you_need = crawling_settings2['comic']
@@ -106,6 +136,7 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
             browser.quit()
             print("网络可能未连接")
 
+    # 获取这个进程要爬取的话数区间
     settings = q.get(True)
     if not browser:
         return
@@ -114,8 +145,9 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
         return
     browser.get("http://ac.qq.com/ComicView/index/id/505430/cid/" + str(settings['cid']))
 
-    thread = list()
     # 正式开始爬取图片
+    # 下载图片线程列表
+    thread = list()
     while settings['start_episode'] <= settings['end_of_episode']:
         print('正在爬取第%d话' % settings['start_episode'])
 
@@ -153,6 +185,7 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
 
             t = threading.Thread(target=save_pic, args=(url, pic_all_name))
             thread.append(t)
+            # 为避免被封禁，对同时下载图片数量进行限制
             while len(thread) > 2:
                 time.sleep(0.2)
                 for i in thread:
@@ -172,10 +205,13 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
             print("已到最后一话，第%d话。" % (settings['start_episode'] - 1))
             break
 
+    # 等待所有图片下载完毕
     while len(thread) != 0:
         for i in thread:
             if not i.is_alive():
                 thread.remove(i)
+
+    # 返回下载结果
     r.put(settings['start_episode'] - 1)
     browser.quit()
 
@@ -199,15 +235,19 @@ if __name__ == '__main__':
         os._exit(0)
     finally:
         pass
+
+    # 用于进程间的通信，要爬取的集数，爬取结果
     q_msg = Queue()
     r_msg = Queue()
+
+    # 打开两个爬取进程
     p_browser0 = Process(target=crawling_comic, args=(q_msg, r_msg, crawling_settings))
     p_browser1 = Process(target=crawling_comic, args=(q_msg, r_msg, crawling_settings))
     p_browser0.start()
     p_browser1.start()
 
-    settings = dict()
     # 爬取的集数设置
+    settings = dict()
     settings['start_episode'] = crawling_settings['last_episode'] + 1
     settings['end_of_episode'], first_browser = get_end_of_episode()
 
@@ -220,7 +260,7 @@ if __name__ == '__main__':
         print("网络可能未连接")
         exit()
 
-    # 进程间的负载均衡
+    # 进程间的负载均衡，即分配各自要爬取的集数
     short_of_episode = settings['end_of_episode'] - settings['start_episode'] + 1
     if short_of_episode > 1:
         remainder = short_of_episode % 3
@@ -255,11 +295,13 @@ if __name__ == '__main__':
         settings['cid'] = get_right_title(settings['start_episode'])
         q_msg.put(settings)
 
+    # 三个进程开始爬取
     start_time = time.time()
     crawling_comic(q_msg, r_msg, crawling_settings, first_browser)
     p_browser0.join()
     p_browser1.join()
 
+    # 获取爬取结果
     while not r_msg.empty():
         tem = r_msg.get()
         if tem > crawling_settings['last_episode']:
@@ -270,4 +312,5 @@ if __name__ == '__main__':
     except:
         print("配置文件保存失败")
 
+    # 发送爬取结果提示邮件
     send_email()
