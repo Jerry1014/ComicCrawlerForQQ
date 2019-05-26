@@ -1,11 +1,11 @@
 # Comic-Onepiece-Crawler
 - 爬取腾讯动漫上的漫画
-- 环境：py3    第三方库：selenium，requests，pandas
+- 环境：py3    第三方库：selenium，requests
 
 ## 使用步骤
 - 1.下载py脚本
 - 2.如果你有chrome浏览器的话，仅需下载chromedriver.exe
-- 3.否则，根据你的电脑下载对应的IEDriverServer(32/64).exe   （在将来支持）
+- 3.~~否则，根据你的电脑下载对应的IEDriverServer(32/64).exe~~ （在将来支持）
 - **注意：XXX.exe必须和脚本放在同一目录下**
 - 4.打开脚本
 
