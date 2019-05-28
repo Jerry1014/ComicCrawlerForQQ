@@ -1,14 +1,37 @@
 # -*- coding: utf-8 -*-
+"""
+腾讯动漫爬虫脚本
+
+第一个参数选项
+1.无 将按配置文件的默认设置进行爬取，无配置文件报错
+2. m (modify file) 在配置文件的基础上进行修改（永久性） 后接可选的详细配置参数，见下
+3. t (temporary) 在配置文件的基础上，进行临时性的爬取  后接可选的详细配置参数，见下
+4. s (set file) 建立一个配置文件，若之前已经存在，则会被覆盖，修改参数也可通过直接修改配置文件完成  后接必选的详细配置参数，见下
+
+具体的参数配置 mf/t 下列参数均为可选参数 s则必须包含下列所有参数（除-e外）
+-c xxx 如 -c 505430/  将要爬取的漫画设置为海贼王 从你要爬取的漫画的url中取得
+-se xxx 如 -se 945  将开始爬取的话数设定为第945话
+-n xxx 如 -n 5  从设置的开始爬取话数开始，一共爬取5话（如有更新），默认为4，仅对本次有效，不记录到配置文件
+-p xxx 如 -p D:\\tem\\  将漫画图片的保存路径设置为D:\\tem\\
+-e xxx 如 -e 13322468550@163.com  设置将爬取结果以邮件方式发送的发送者邮箱  ！！！此参数后必须带有以下的参数 -r xxx 爬取结果的收件人邮箱 -psw xxx 发送邮箱的密码
+
+示例：
+脚本名.pyw s -c 505430/ -se 945 -n 5 -p D:\tem\ -e 133xxxx8550@163.com -r 757xxx393@qq.com -psw xxx
+第一次使用脚本或需要生成新的配置文件 爬取海贼王 从945集开始 连续爬取5话 爬取的图片保存在D:\tem\下 最后的爬取结果通过133xxxx8550@163.com发送到757xxx383@qq。com 其中发送邮箱的密码是xxx
+
+由于本人相当懒，暂时不打算做选项的输入检测
+"""
 import os
 import re
 import smtplib
+import sys
 import threading
 import time
 from email.mime.text import MIMEText
 from email.utils import formataddr
 from multiprocessing import Process, Queue
 
-import pandas
+import json
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -56,11 +79,12 @@ def init_browser(comic_you_need):
     用于爬取的浏览器初始化
     :return:webdriver.Chrome
     """
-    # 浏览器设置
-    chrome_options = Options()
-    # 无界面
-    chrome_options.add_argument('--headless')
-    the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
+    # # 浏览器设置
+    # chrome_options = Options()
+    # # 无界面
+    # chrome_options.add_argument('--headless')
+    # the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
+    the_init_browser = webdriver.Chrome()
 
     # 用于补全网址
     url = "http://ac.qq.com/Comic/ComicInfo/id/" + comic_you_need
@@ -81,9 +105,9 @@ def get_end_of_episode():
             end_of_episode_text = first_browser.find_element_by_class_name('works-ft-new').text
             end_of_episode = int(re.search("第\d+[话 ]", end_of_episode_text).group(0)[1:4])
         except NoSuchElementException or ValueError:
-            end_of_episode = crawling_settings['last_episode'] + 3
+            end_of_episode = crawling_settings['last_episode'] + DEFAULT_NUM_EACH_CRAWLING
     else:
-        end_of_episode = crawling_settings['last_episode'] + 3
+        end_of_episode = crawling_settings['last_episode'] + DEFAULT_NUM_EACH_CRAWLING
     return end_of_episode, first_browser
 
 
@@ -218,23 +242,55 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
 
 if __name__ == '__main__':
     # 加载配置文件
-    try:
-        settings_file_1 = pandas.read_csv("settings.csv").to_dict()
-        crawling_settings = dict()
-        crawling_settings['comic'] = settings_file_1['comic'][0]
-        crawling_settings['save_path'] = settings_file_1['save_path'][0]
-        crawling_settings['last_episode'] = settings_file_1['last_episode'][0]
-        crawling_settings['sender'] = settings_file_1['sender'][0]
-        crawling_settings['password'] = settings_file_1['password'][0]
-        crawling_settings['receiver'] = settings_file_1['receiver'][0]
-    except:
-        crawling_settings = {'comic': '505430/', 'save_path': 'D:\\tem\\', 'last_episode': 916}
-        settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
-        settings_file_1 = settings_file_1.to_csv("settings.csv")
-        input("已生成默认的配置文件，请在当前工作目录下打开并配置，再重新启动此脚本")
-        os._exit(0)
-    finally:
-        pass
+    PARAMETER_MAPPING = {'-c': 'comic', '-se': 'last_episode', '-p': 'save_path', '-e': 'sender', '-psw': 'password',
+                         '-r': 'receiver', '-n': 'num'}
+    DEFAULT_SETTING_FILE_NAME = "settings.csv"
+    DEFAULT_NUM_EACH_CRAWLING = 3
+    argv = sys.argv
+    crawling_settings = None
+    if len(argv) == 1:
+        # 未指定参数使用默认配置文件
+        with open(DEFAULT_SETTING_FILE_NAME) as f:
+            crawling_settings = dict(json.load(f))
+    else:
+        # 指定参数
+        if '?' in argv[1] or 'h' in argv[1]:
+            # 第一个命令为 -? ? -h h help 均认为是输出帮助
+            print(__doc__)
+            exit(0)
+        else:
+            if argv[1] == 'm' or argv[1] == 't':
+                # 在源配置文件上修改部分的配置
+                with open(DEFAULT_SETTING_FILE_NAME) as f:
+                    crawling_settings = dict(json.load(f))
+            if argv[1] == 's' or argv[1] == 'm' or argv[1] == 't':
+                # 新建新的配置
+                crawling_settings = dict()
+                for command, value in zip(argv[2::2], argv[3::2]):
+                    crawling_settings[PARAMETER_MAPPING[command]] = value
+
+    if crawling_settings is None:
+        exit(1)
+    if 'num' in crawling_settings.keys():
+        DEFAULT_NUM_EACH_CRAWLING = int(crawling_settings['num'])
+
+    # try:
+    #     settings_file_1 = pandas.read_csv("settings.csv").to_dict()
+    #     crawling_settings = dict()
+    #     crawling_settings['comic'] = settings_file_1['comic'][0]
+    #     crawling_settings['save_path'] = settings_file_1['save_path'][0]
+    #     crawling_settings['last_episode'] = settings_file_1['last_episode'][0]
+    #     crawling_settings['sender'] = settings_file_1['sender'][0]
+    #     crawling_settings['password'] = settings_file_1['password'][0]
+    #     crawling_settings['receiver'] = settings_file_1['receiver'][0]
+    # except:
+    #     crawling_settings = {'comic': '505430/', 'save_path': 'D:\\tem\\', 'last_episode': 916}
+    #     settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
+    #     settings_file_1 = settings_file_1.to_csv("settings.csv")
+    #     input("已生成默认的配置文件，请在当前工作目录下打开并配置，再重新启动此脚本")
+    #     os._exit(0)
+    # finally:
+    #     pass
 
     # 用于进程间的通信，要爬取的集数，爬取结果
     q_msg = Queue()
@@ -248,7 +304,7 @@ if __name__ == '__main__':
 
     # 爬取的集数设置
     settings = dict()
-    settings['start_episode'] = crawling_settings['last_episode'] + 1
+    settings['start_episode'] = int(crawling_settings['last_episode']) + 1
     settings['end_of_episode'], first_browser = get_end_of_episode()
 
     # 访问海贼王动漫的页面
@@ -306,11 +362,14 @@ if __name__ == '__main__':
         tem = r_msg.get()
         if tem > crawling_settings['last_episode']:
             crawling_settings['last_episode'] = tem
-    try:
-        settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
-        settings_file_1 = settings_file_1.to_csv("settings.csv")
-    except:
-        print("配置文件保存失败")
+
+    with open(DEFAULT_SETTING_FILE_NAME, 'w') as f:
+        json.dump(crawling_settings, f)
+    # try:
+    #     settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
+    #     settings_file_1 = settings_file_1.to_csv("settings.csv")
+    # except:
+    #     print("配置文件保存失败")
 
     # 发送爬取结果提示邮件
     send_email()
