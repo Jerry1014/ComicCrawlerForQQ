@@ -10,7 +10,7 @@
 
 具体的参数配置 mf/t 下列参数均为可选参数 s则必须包含下列所有参数（除-e外）
 -c xxx 如 -c 505430/  将要爬取的漫画设置为海贼王 从你要爬取的漫画的url中取得
--se xxx 如 -se 945  将开始爬取的话数设定为第945话
+-se xxx 如 -se 945  将开始爬取的话数设定为第945话 ！！！（不包括第945话）！！！
 -n xxx 如 -n 5  从设置的开始爬取话数开始，一共爬取5话（如有更新），默认为4，仅对本次有效，不记录到配置文件
 -p xxx 如 -p D:\\tem\\  将漫画图片的保存路径设置为D:\\tem\\
 -e xxx 如 -e 13322468550@163.com  设置将爬取结果以邮件方式发送的发送者邮箱  ！！！此参数后必须带有以下的参数 -r xxx 爬取结果的收件人邮箱 -psw xxx 发送邮箱的密码
@@ -79,12 +79,11 @@ def init_browser(comic_you_need):
     用于爬取的浏览器初始化
     :return:webdriver.Chrome
     """
-    # # 浏览器设置
-    # chrome_options = Options()
-    # # 无界面
-    # chrome_options.add_argument('--headless')
-    # the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
-    the_init_browser = webdriver.Chrome()
+    # 浏览器设置
+    chrome_options = Options()
+    # 无界面
+    chrome_options.add_argument('--headless')
+    the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
 
     # 用于补全网址
     url = "http://ac.qq.com/Comic/ComicInfo/id/" + comic_you_need
@@ -103,11 +102,12 @@ def get_end_of_episode():
     if first_browser:
         try:
             end_of_episode_text = first_browser.find_element_by_class_name('works-ft-new').text
-            end_of_episode = int(re.search("第\d+[话 ]", end_of_episode_text).group(0)[1:4])
+            end_of_episode = min(int(re.search("第\d+[话 ]", end_of_episode_text).group(0)[1:4]),
+                                 int(crawling_settings['last_episode']) + int(crawling_settings['num']))
         except NoSuchElementException or ValueError:
-            end_of_episode = crawling_settings['last_episode'] + DEFAULT_NUM_EACH_CRAWLING
+            end_of_episode = int(crawling_settings['last_episode']) + int(crawling_settings['num'])
     else:
-        end_of_episode = crawling_settings['last_episode'] + DEFAULT_NUM_EACH_CRAWLING
+        end_of_episode = int(crawling_settings['last_episode']) + int(crawling_settings['num'])
     return end_of_episode, first_browser
 
 
@@ -360,7 +360,7 @@ if __name__ == '__main__':
     # 获取爬取结果
     while not r_msg.empty():
         tem = r_msg.get()
-        if tem > crawling_settings['last_episode']:
+        if tem > int(crawling_settings['last_episode']):
             crawling_settings['last_episode'] = tem
 
     with open(DEFAULT_SETTING_FILE_NAME, 'w') as f:
