@@ -11,14 +11,14 @@
 
 具体的参数配置 mf/t 下列参数均为可选参数 s则必须包含下列所有参数（除-e外）
 -c xxx 如 -c 505430/  将要爬取的漫画设置为海贼王 从你要爬取的漫画的url中取得
--se xxx 如 -se 945  将开始爬取的话数设定为第945话 ！！！（不包括第945话）！！！
--n xxx 如 -n 5  从设置的开始爬取话数开始，一共爬取5话（如有更新），默认为4，仅对本次有效，不记录到配置文件
+-se xxx 如 -se 145  将开始爬取的话数设定为第145话 ！！！（不包括第145话）！！！
+-n xxx 如 -n 5  从设置的开始爬取话数开始，一共爬取5话（如有更新），默认为4
 -p xxx 如 -p D:\\tem\\  将漫画图片的保存路径设置为D:\\tem\\
 -e xxx 如 -e 13322468550@163.com  设置将爬取结果以邮件方式发送的发送者邮箱  ！！！此参数后必须带有以下的参数 -r xxx 爬取结果的收件人邮箱 -psw xxx 发送邮箱的密码
 
 示例：
-脚本名.pyw s -c 505430/ -se 945 -n 5 -p D:\tem\ -e 133xxxx8550@163.com -r 757xxx393@qq.com -psw xxx
-第一次使用脚本或需要生成新的配置文件 爬取海贼王 从945集开始 连续爬取5话 爬取的图片保存在D:\tem\下 最后的爬取结果通过133xxxx8550@163.com发送到757xxx383@qq。com 其中发送邮箱的密码是xxx
+脚本名.pyw s -c 505430/ -se 145 -n 5 -p D:\tem\ -e 133xxxx8550@163.com -r 757xxx393@qq.com -psw xxx
+第一次使用脚本或需要生成新的配置文件 爬取海贼王 从145集开始 连续爬取5话 爬取的图片保存在D:\tem\下 最后的爬取结果通过133xxxx8550@163.com发送到757xxx383@qq。com 其中发送邮箱的密码是xxx
 
 由于本人相当懒，暂时不打算做选项的输入检测
 """
@@ -44,7 +44,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def send_email():
     """
-    用于向指定邮箱发送爬取结果邮件，相应的设置在crawling_settings中
+    用于向指定邮箱发送爬取结果邮件，相应的设置在crawling_settings中，如果部署在远程服务器，可通过修改此函数，将生成的漫画pdf发送到你的邮箱内
     :return: None
     """
     try:
@@ -242,6 +242,7 @@ def crawling_comic(q, r, crawling_settings2, browser=None):
 
 
 if __name__ == '__main__':
+    print('请自行检查是否已经更新到需要爬取的话数，当爬虫爬到最后一话或已经越界时，爬虫会自动退出而没有提示')
     # 加载配置文件
     PARAMETER_MAPPING = {'-c': 'comic', '-se': 'last_episode', '-p': 'save_path', '-e': 'sender', '-psw': 'password',
                          '-r': 'receiver', '-n': 'num'}
@@ -274,24 +275,6 @@ if __name__ == '__main__':
         exit(1)
     if 'num' in crawling_settings.keys():
         DEFAULT_NUM_EACH_CRAWLING = int(crawling_settings['num'])
-
-    # try:
-    #     settings_file_1 = pandas.read_csv("settings.csv").to_dict()
-    #     crawling_settings = dict()
-    #     crawling_settings['comic'] = settings_file_1['comic'][0]
-    #     crawling_settings['save_path'] = settings_file_1['save_path'][0]
-    #     crawling_settings['last_episode'] = settings_file_1['last_episode'][0]
-    #     crawling_settings['sender'] = settings_file_1['sender'][0]
-    #     crawling_settings['password'] = settings_file_1['password'][0]
-    #     crawling_settings['receiver'] = settings_file_1['receiver'][0]
-    # except:
-    #     crawling_settings = {'comic': '505430/', 'save_path': 'D:\\tem\\', 'last_episode': 916}
-    #     settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
-    #     settings_file_1 = settings_file_1.to_csv("settings.csv")
-    #     input("已生成默认的配置文件，请在当前工作目录下打开并配置，再重新启动此脚本")
-    #     os._exit(0)
-    # finally:
-    #     pass
 
     # 用于进程间的通信，要爬取的集数，爬取结果
     q_msg = Queue()
@@ -364,13 +347,9 @@ if __name__ == '__main__':
         if tem > int(crawling_settings['last_episode']):
             crawling_settings['last_episode'] = tem
 
-    with open(DEFAULT_SETTING_FILE_NAME, 'w') as f:
-        json.dump(crawling_settings, f)
-    # try:
-    #     settings_file_1 = pandas.DataFrame(crawling_settings, index=[0])
-    #     settings_file_1 = settings_file_1.to_csv("settings.csv")
-    # except:
-    #     print("配置文件保存失败")
+    if argv[1] != 't':
+        with open(DEFAULT_SETTING_FILE_NAME, 'w') as f:
+            json.dump(crawling_settings, f)
 
     # 发送爬取结果提示邮件
     send_email()
