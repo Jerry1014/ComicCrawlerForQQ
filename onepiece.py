@@ -44,16 +44,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def send_email():
     """
-    用于向指定邮箱发送爬取结果邮件，相应的设置在crawling_settings中，如果部署在远程服务器，可通过修改此函数，将生成的漫画pdf发送到你的邮箱内
+    用于向指定邮箱发送爬取结果邮件，相应的设置在crawling_settings中，如果部署在远程服务器，可通过修改此函数中的msg，将生成的漫画pdf发送到你的邮箱内
     :return: None
     """
     try:
         msg = MIMEText('已爬取到第' + str(crawling_settings['last_episode']) + "话", 'plain', 'utf-8')
-        msg['From'] = formataddr(["海贼王爬虫", crawling_settings['sender']])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
-        msg['To'] = formataddr(["Jerry", crawling_settings['receiver']])  # 括号里的对应收件人邮箱昵称、收件人邮箱账号
+        msg['From'] = formataddr(["动漫爬虫", crawling_settings['sender']])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
+        msg['To'] = formataddr(["主人", crawling_settings['receiver']])  # 括号里的对应收件人邮箱昵称、收件人邮箱账号
         msg['Subject'] = "爬虫报告"  # 邮件的主题，也可以说是标题
 
-        server = smtplib.SMTP("smtp.163.com", 25)  # 发件人邮箱中的SMTP服务器，端口是25
+        server = smtplib.SMTP('smtp.' + crawling_settings['sender'].split('@')[-1], 25)  # 发件人邮箱中的SMTP服务器，端口是25
         server.login(crawling_settings['sender'], crawling_settings['password'])  # 括号中对应的是发件人邮箱账号、邮箱密码
         server.sendmail(crawling_settings['sender'], [crawling_settings['receiver'], ], msg.as_string())
         # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
@@ -82,9 +82,9 @@ def init_browser(comic_you_need):
     """
     # 浏览器设置
     chrome_options = Options()
-    # 无界面
+    # 无界面设置
     chrome_options.add_argument('--headless')
-    the_init_browser = webdriver.Chrome(chrome_options=chrome_options)
+    the_init_browser = webdriver.Chrome(options=chrome_options)
 
     # 用于补全网址
     url = "http://ac.qq.com/Comic/ComicInfo/id/" + comic_you_need
